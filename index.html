@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>酸碱滴定模拟器 (稳定内核版)</title>
+    <title>高中化学：酸碱滴定虚拟实验室 (自适应修复版)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
         body {
             font-family: 'Noto Sans SC', sans-serif;
@@ -20,49 +20,30 @@
             color: #334155;
         }
 
-        /* 实验台卡片 */
-        .lab-panel {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
-            overflow: hidden;
-        }
-
-        /* 滴定管系统 */
-        .burette-system {
+        /* --- 实验装置样式 (V1复刻优化) --- */
+        .burette-container {
             position: relative;
             width: 40px;
-            height: 320px;
+            height: 280px; /* 稍微减小高度以适配布局 */
+            border-left: 2px solid #94a3b8;
+            border-right: 2px solid #94a3b8;
+            border-bottom: 2px solid #94a3b8;
+            border-radius: 0 0 4px 4px;
+            background: rgba(255, 255, 255, 0.6);
             margin: 0 auto;
+            overflow: hidden; 
         }
-        .burette-tube {
-            width: 100%;
-            height: 300px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid #94a3b8;
-            border-bottom: none;
-            border-radius: 4px 4px 0 0;
-            position: relative;
-            overflow: hidden;
-        }
+
         .burette-liquid {
             position: absolute;
-            top: 0; /* 从顶部开始计算空缺 */
+            top: 0; 
+            left: 0;
             width: 100%;
-            background: #cbd5e1; /* 灰色液体 */
+            background-color: #cbd5e1; 
+            transition: height 0.1s linear;
             border-bottom: 1px solid #94a3b8;
-            transition: height 0.1s linear;
         }
-        /* 实际上我们显示的是液体，所以反过来：Liquid在底部 */
-        .burette-fluid-visual {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: #cbd5e1;
-            transition: height 0.1s linear;
-            border-top: 1px solid #94a3b8;
-        }
+
         .burette-tip {
             width: 4px;
             height: 20px;
@@ -71,335 +52,406 @@
             position: relative;
         }
 
-        /* 锥形瓶系统 */
-        .flask-system {
+        .flask-container {
             position: relative;
-            width: 140px;
-            height: 160px;
-            margin: 5px auto 0;
+            width: 120px;
+            height: 140px;
+            margin: 5px auto 0; /* 减小间距 */
         }
+
         .flask-neck {
-            width: 34px;
+            width: 36px;
             height: 50px;
             margin: 0 auto;
-            border: 2px solid #cbd5e1;
-            border-bottom: none;
-            background: rgba(255,255,255,0.4);
+            border-left: 2px solid #cbd5e1;
+            border-right: 2px solid #cbd5e1;
+            background: rgba(255, 255, 255, 0.4);
             position: relative;
             z-index: 10;
         }
+
         .flask-body {
             width: 120px;
             height: 90px;
-            margin: -2px auto 0;
+            border-radius: 40% 40% 50% 50% / 15% 15% 40% 40%;
             border: 2px solid #cbd5e1;
             border-top: none;
-            border-radius: 20% 20% 50% 50% / 10% 10% 30% 30%;
-            background: rgba(255,255,255,0.4);
+            background: rgba(255, 255, 255, 0.4);
             position: relative;
+            margin-top: -4px;
             overflow: hidden;
+            transition: background-color 0.2s ease;
             z-index: 5;
         }
-        .flask-content {
+
+        .flask-liquid {
             position: absolute;
             bottom: 0;
+            left: 0;
             width: 100%;
-            transition: background-color 0.3s ease, height 0.2s ease;
+            height: 50%;
+            transition: background-color 0.2s ease, height 0.2s ease;
         }
 
         /* 滴液动画 */
         .drop {
-            width: 6px;
-            height: 6px;
-            background: #cbd5e1;
-            border-radius: 50%;
             position: absolute;
             left: 50%;
-            margin-left: -3px;
-            top: 320px; /* Tip location */
+            top: 300px; 
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #cbd5e1;
+            transform: translateX(-50%);
             opacity: 0;
             pointer-events: none;
         }
-        .drop.falling {
-            animation: dropAnim 0.4s ease-in;
-        }
-        @keyframes dropAnim {
-            0% { top: 320px; opacity: 1; }
-            100% { top: 400px; opacity: 0; }
+
+        .animate-drop {
+            animation: dropFall 0.4s ease-in;
         }
 
-        /* 仪表盘数字 */
-        .lcd-text {
-            font-family: 'JetBrains Mono', monospace;
+        @keyframes dropFall {
+            0% { top: 300px; opacity: 1; }
+            100% { top: 360px; opacity: 0; }
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+
+        /* Toast 提示框 */
+        #toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #toast.show {
+            opacity: 1;
         }
     </style>
-    <!-- Visualization & Content Choices: Separated Strong/Weak logic to fix the "pH 14" bug. Strong acid now uses stoichiometric calculation. Weak acid uses Charge Balance. -->
+
+    <!-- Placeholder Comments -->
+    <!-- Chosen Palette: Scientific Blue (Indigo) & Slate. Professional and clean. -->
+    <!-- Application Structure Plan: 
+        1. Theory Header (V1 Layout).
+        2. Lab Split View (Modified V1 - Responsive Fixed):
+           - Container height changed from h-[550px] to min-h-[600px] to prevent button clipping.
+           - Left: Apparatus + Controls.
+           - Right: Data Grid + Big Chart.
+        3. Logic: V4 Stable Kernel (Split logic for Strong/Weak acids).
+    -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
 </head>
 <body class="flex flex-col min-h-screen">
 
-    <!-- Navbar -->
+    <!-- Toast -->
+    <div id="toast">提示信息</div>
+
+    <!-- Header / Navigation -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">⚗️</span>
-                <h1 class="font-bold text-slate-800 text-lg tracking-tight">VirtualChem <span class="text-slate-400 font-normal">| 酸碱滴定</span></h1>
-            </div>
-            <div class="flex gap-4">
-                <div class="hidden md:flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    核心算法: Stoichiometry (强) + Charge Balance (弱)
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <span class="text-2xl">🧪</span>
+                        <h1 class="text-xl font-bold text-slate-800 tracking-tight">VirtualChem <span class="text-slate-500 font-normal">| 酸碱滴定实验室</span></h1>
+                    </div>
                 </div>
-                <button onclick="resetLab()" class="text-sm font-bold text-indigo-600 hover:text-indigo-800">重置实验</button>
+                <div class="flex items-center space-x-4">
+                    <button onclick="document.getElementById('theory').scrollIntoView({behavior:'smooth'})" class="text-sm font-medium text-slate-500 hover:text-indigo-600 transition">实验原理</button>
+                    <button onclick="resetLab()" class="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition">↺ 重置实验</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow max-w-7xl mx-auto p-4 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
-        <!-- 左侧：设置与操作 (4列) -->
-        <div class="lg:col-span-4 flex flex-col gap-4">
+        <!-- Section 1: Theory Context (V1 Layout) -->
+        <section id="theory" class="mb-10">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">实验原理 (Principles)</h2>
+                <p class="text-slate-600 leading-relaxed max-w-3xl text-sm">
+                    酸碱滴定是通过滴加已知浓度的碱液（滴定剂）来测定酸液浓度的过程。本实验模拟 0.1M NaOH 滴定 25mL 酸液。
+                </p>
+            </div>
             
-            <!-- 控制台 -->
-            <div class="lab-panel p-5">
-                <h2 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">实验配置</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">酸液 (Analyte)</label>
-                        <select id="acidType" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" onchange="resetLab()">
-                            <option value="strong">强酸 (HCl 0.1M)</option>
-                            <option value="weak">弱酸 (CH₃COOH 0.1M)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">指示剂 (Indicator)</label>
-                        <select id="indicator" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none" onchange="updateUI()">
-                            <option value="pp">酚酞 (8.2 ~ 10.0)</option>
-                            <option value="mo">甲基橙 (3.1 ~ 4.4)</option>
-                        </select>
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mb-3 text-blue-600 font-bold">1</div>
+                    <h3 class="font-semibold text-slate-800 mb-1">等当点 (Equivalence Point)</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">酸碱物质的量完全相等的时刻。强酸为 pH 7.0，弱酸约为 pH 8.7 (因水解)。</p>
                 </div>
-
-                <hr class="border-slate-100 my-5">
-
-                <div class="space-y-3">
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">手动滴加</h2>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addVolume(0.05)" class="py-2 px-3 bg-white border border-slate-300 rounded hover:bg-slate-50 text-sm font-medium transition active:scale-95">
-                            +1 滴 (0.05mL)
-                        </button>
-                        <button onclick="addVolume(1.0)" class="py-2 px-3 bg-white border border-slate-300 rounded hover:bg-slate-50 text-sm font-medium transition active:scale-95">
-                            +1.0 mL
-                        </button>
-                    </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mb-3 text-indigo-600 font-bold">2</div>
+                    <h3 class="font-semibold text-slate-800 mb-1">指示剂 (Indicator)</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">利用颜色变化指示终点。酚酞(变粉)常用于强碱滴定弱酸；甲基橙(变黄)用于强酸。</p>
                 </div>
-
-                <hr class="border-slate-100 my-5">
-
-                <div class="space-y-3">
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">自动滴定</h2>
-                    
-                    <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
-                        <span>速度: 慢</span>
-                        <span>快</span>
-                    </div>
-                    <input type="range" id="speedRange" min="1" max="5" value="2" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                    
-                    <button id="autoBtn" onclick="toggleAuto()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded shadow-lg shadow-indigo-200 transition active:scale-95 flex items-center justify-center gap-2">
-                        <span>▶</span> 开始自动滴定
-                    </button>
-                    <p class="text-[10px] text-center text-slate-400">将在 24.0mL 处自动暂停以观察突变</p>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-8 h-8 bg-rose-100 rounded-full flex items-center justify-center mb-3 text-rose-600 font-bold">3</div>
+                    <h3 class="font-semibold text-slate-800 mb-1">滴定突跃 (The Jump)</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">在等当点附近 (25mL)，只需极少量的碱，pH 值就会发生巨大的垂直跳跃。</p>
                 </div>
             </div>
+        </section>
 
-            <!-- 装置视图 -->
-            <div class="lab-panel bg-gradient-to-b from-slate-50 to-white min-h-[400px] flex flex-col items-center justify-center relative">
-                
-                <!-- 滴定管 -->
-                <div class="burette-system">
-                    <div class="text-[10px] text-center text-slate-400 absolute -top-5 w-full">NaOH 0.1M</div>
-                    <div class="burette-tube">
-                        <div id="buretteLiquid" class="burette-fluid-visual" style="height: 100%;"></div>
-                    </div>
-                    <div class="burette-tip"></div>
-                    <div id="drop" class="drop"></div>
-                </div>
-
-                <!-- 锥形瓶 -->
-                <div class="flask-system">
-                    <div class="flask-neck"></div>
-                    <div class="flask-body">
-                        <div id="flaskLiquid" class="flask-content bg-transparent" style="height: 40%;"></div>
-                    </div>
-                    <div class="text-[10px] text-center text-slate-400 mt-2">待测酸液 25mL</div>
-                </div>
-
-                <!-- 颜色指示 -->
-                <div class="absolute top-4 left-4 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
-                    <div id="colorDot" class="w-3 h-3 rounded-full border border-slate-300"></div>
-                    <span id="colorName" class="text-xs font-bold text-slate-600">无色</span>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- 右侧：数据与图表 (8列) -->
-        <div class="lg:col-span-8 flex flex-col gap-4">
+        <!-- Section 2: The Virtual Lab (Main Workspace) -->
+        <!-- Fixed: Changed h-[550px] to min-h-[600px] to allow content to grow -->
+        <section id="lab" class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
             
-            <!-- 仪表盘 -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="lab-panel p-4 border-l-4 border-indigo-500">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold">pH 值</div>
-                    <div id="phDisplay" class="text-3xl font-bold text-slate-800 lcd-text mt-1">1.00</div>
+            <!-- Top Toolbar (Settings) -->
+            <div class="bg-slate-50 border-b border-slate-200 p-4 flex flex-wrap gap-6 items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">选择酸液:</label>
+                    <select id="acidSelect" class="bg-white border border-slate-300 text-slate-800 text-sm rounded px-3 py-1 focus:outline-none focus:border-indigo-500" onchange="resetLab()">
+                        <option value="strong">强酸 (HCl)</option>
+                        <option value="weak">弱酸 (CH₃COOH)</option>
+                    </select>
                 </div>
-                <div class="lab-panel p-4 border-l-4 border-blue-400">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold">加入体积 (V)</div>
-                    <div class="text-3xl font-bold text-slate-800 lcd-text mt-1">
-                        <span id="volDisplay">0.00</span> <span class="text-sm text-slate-500 font-sans">mL</span>
+                <div class="flex items-center gap-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">指示剂:</label>
+                    <select id="indicatorSelect" class="bg-white border border-slate-300 text-slate-800 text-sm rounded px-3 py-1 focus:outline-none focus:border-indigo-500" onchange="updateUI()">
+                        <option value="pp">酚酞 (Phenolphthalein)</option>
+                        <option value="mo">甲基橙 (Methyl Orange)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Lab Layout: Split View -->
+            <!-- Fixed: Using min-h so it stretches on tall screens but expands on small ones -->
+            <div class="flex flex-col lg:flex-row min-h-[600px]">
+                
+                <!-- Left Column: Apparatus & CONTROLS -->
+                <div class="w-full lg:w-1/3 bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 p-6 flex flex-col items-center justify-between">
+                    
+                    <div class="w-full flex flex-col items-center">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase self-start mb-4">实验操作区</h3>
+
+                        <!-- Visual Apparatus -->
+                        <div class="relative">
+                            <!-- Burette -->
+                            <div class="relative z-10">
+                                <div class="text-[10px] text-center text-slate-400 mb-1">碱液滴定管</div>
+                                <div class="burette-container">
+                                    <div id="buretteLiquid" class="burette-liquid" style="height: 0%;"></div>
+                                </div>
+                                <div class="burette-tip"></div>
+                            </div>
+
+                            <!-- Drop Animation -->
+                            <div id="drop" class="drop"></div>
+
+                            <!-- Flask -->
+                            <div class="relative z-10 mt-1">
+                                <div class="flask-container">
+                                    <div class="flask-neck"></div>
+                                    <div class="flask-body">
+                                        <div id="flaskLiquid" class="flask-liquid bg-slate-100"></div>
+                                    </div>
+                                </div>
+                                <!-- Color Label -->
+                                <div class="mt-2 flex items-center justify-center gap-2">
+                                    <div id="colorSample" class="w-3 h-3 rounded-full border border-slate-300 bg-transparent"></div>
+                                    <span id="colorName" class="text-xs font-bold text-slate-500">无色</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL PANEL (Always visible at bottom with spacing) -->
+                    <div class="w-full max-w-xs space-y-3 pt-8 pb-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="addVolume(0.05)" class="py-3 px-4 bg-white border border-slate-300 rounded shadow-sm text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-indigo-300 active:scale-95 transition">
+                                + 1 滴
+                            </button>
+                            <button onclick="addVolume(1.0)" class="py-3 px-4 bg-white border border-slate-300 rounded shadow-sm text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-indigo-300 active:scale-95 transition">
+                                + 1.0 mL
+                            </button>
+                        </div>
+                        <button id="autoBtn" onclick="toggleAuto()" class="w-full py-3 bg-indigo-600 text-white rounded shadow-md text-sm font-bold hover:bg-indigo-700 active:scale-95 transition flex items-center justify-center gap-2">
+                            <span>▶</span> 开始自动滴定
+                        </button>
+                        <div class="text-[10px] text-center text-slate-400">
+                            自动模式将在 24.0mL 处暂停
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Data & Chart -->
+                <div class="w-full lg:w-2/3 p-6 flex flex-col bg-white">
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                            <div class="text-xs text-indigo-500 uppercase font-bold">pH 值</div>
+                            <div id="phDisplay" class="text-2xl font-bold text-indigo-700 font-mono mt-1">1.00</div>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="text-xs text-slate-500 uppercase font-bold">加入体积</div>
+                            <div class="text-2xl font-bold text-slate-700 font-mono mt-1"><span id="volDisplay">0.00</span> <span class="text-sm font-normal text-slate-500">mL</span></div>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="text-xs text-slate-500 uppercase font-bold">剩余酸量</div>
+                            <div class="text-2xl font-bold text-slate-700 font-mono mt-1"><span id="molDisplay">2.50</span> <span class="text-sm font-normal text-slate-500">mmol</span></div>
+                        </div>
+                        <div class="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                            <div class="text-xs text-emerald-600 uppercase font-bold">状态</div>
+                            <div id="statusDisplay" class="text-sm font-bold text-emerald-700 mt-2">未开始</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="flex-grow relative border border-slate-100 rounded-lg p-2 min-h-[350px]">
+                        <div class="chart-container h-full w-full">
+                            <canvas id="titrationChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="lab-panel p-4 border-l-4 border-emerald-400">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold">剩余酸量</div>
-                    <div class="text-xl font-bold text-slate-700 lcd-text mt-2">
-                        <span id="molDisplay">2.50</span> <span class="text-xs text-slate-500 font-sans">mmol</span>
+            </div>
+        </section>
+
+        <!-- Section 3: Analysis (V1 Layout) -->
+        <section class="mt-10 mb-12">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">实验分析与总结</h2>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-800 mb-3 uppercase tracking-wider">曲线特征</h4>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-indigo-500 rounded-full mr-3"></span>
+                                <span class="text-slate-600 text-sm"><strong>起始点：</strong> 强酸起点很低 (~1)，弱酸稍高 (~3)。</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-indigo-500 rounded-full mr-3"></span>
+                                <span class="text-slate-600 text-sm"><strong>缓冲平台 (Buffer Region)：</strong> 弱酸在滴定初期 pH 上升较快，随后变缓，因为形成了缓冲溶液。</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-indigo-500 rounded-full mr-3"></span>
+                                <span class="text-slate-600 text-sm"><strong>突跃范围：</strong> 在 24mL 到 26mL 之间，pH 发生剧烈变化。这是指示剂变色的关键区域。</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-800 mb-3 uppercase tracking-wider">指示剂选择</h4>
+                        <div class="space-y-2">
+                            <div class="p-3 bg-rose-50 rounded border border-rose-100">
+                                <span class="font-bold text-rose-700 text-xs uppercase block">酚酞 (Phenolphthalein)</span>
+                                <span class="text-xs text-rose-600">变色范围 8.2 - 10.0。最佳选择。因为突跃点通常跨越这个范围。</span>
+                            </div>
+                            <div class="p-3 bg-orange-50 rounded border border-orange-100">
+                                <span class="font-bold text-orange-700 text-xs uppercase block">甲基橙 (Methyl Orange)</span>
+                                <span class="text-xs text-orange-600">变色范围 3.1 - 4.4。强酸滴定强碱可用，但在滴定弱酸时变色过早，不推荐。</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="lab-panel p-4 border-l-4 border-orange-400">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold">反应阶段</div>
-                    <div id="stageDisplay" class="text-sm font-bold text-orange-600 mt-2">未开始</div>
-                </div>
             </div>
-
-            <!-- 图表 -->
-            <div class="lab-panel p-4 flex-grow flex flex-col min-h-[400px]">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-sm font-bold text-slate-700">滴定曲线 (Titration Curve)</h3>
-                    <div class="text-xs text-slate-400">X轴: 体积(mL) / Y轴: pH</div>
-                </div>
-                <div class="relative flex-grow w-full">
-                    <canvas id="titrationChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 教学提示 -->
-            <div id="toast" class="hidden bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between transition-all">
-                <span id="toastMsg" class="text-sm">提示信息</span>
-                <button onclick="document.getElementById('toast').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-        </div>
+        </section>
 
     </main>
 
+    <!-- Logic Script -->
     <script>
-        // --- 核心常量 ---
+        // --- 常量配置 ---
         const CONSTANTS = {
             acidVol: 25.0, // mL
             acidConc: 0.1, // M
             baseConc: 0.1, // M
-            Ka_Acetic: 1.75e-5, // 醋酸电离常数
+            Ka_Acetic: 1.75e-5,
             Kw: 1.0e-14
         };
 
-        // --- 全局状态 ---
+        // --- 状态管理 ---
         let STATE = {
-            addedVol: 0, // mL
+            addedVol: 0,
+            acidType: 'strong',
             history: [],
             isAuto: false,
             timer: null,
-            pausedAtJump: false,
-            acidType: 'strong' // 'strong' or 'weak'
+            pausedAtJump: false
         };
 
-        // --- 核心化学引擎 (修复版) ---
-        // 强酸和弱酸使用不同的计算路径，防止数值不稳定
+        // --- 核心算法 (修复版) ---
+        function calculatePH(Vb_mL) {
+            const Va = CONSTANTS.acidVol;
+            const Ca = CONSTANTS.acidConc;
+            const Cb = CONSTANTS.baseConc;
+            const V_total = Va + Vb_mL;
 
-        function calculatePH(Vb) { // Vb in mL
-            const Va = CONSTANTS.acidVol; // 25
-            const Ca = CONSTANTS.acidConc; // 0.1
-            const Cb = CONSTANTS.baseConc; // 0.1
-            const V_total = Va + Vb;
-
-            // 1. 强酸逻辑 (Stoichiometry) - 绝对稳定
+            // 1. 强酸逻辑 (精确计量)
             if (STATE.acidType === 'strong') {
                 const molAcid = Va * Ca;
-                const molBase = Vb * Cb;
+                const molBase = Vb_mL * Cb;
                 
                 if (molBase < molAcid) {
-                    // 酸过量
-                    const excessAcidMol = molAcid - molBase;
-                    const concH = excessAcidMol / V_total;
-                    return -Math.log10(concH);
+                    return -Math.log10((molAcid - molBase) / V_total);
                 } else if (Math.abs(molBase - molAcid) < 1e-9) {
-                    // 完全中和
                     return 7.00;
                 } else {
-                    // 碱过量
-                    const excessBaseMol = molBase - molAcid;
-                    const concOH = excessBaseMol / V_total;
-                    const pOH = -Math.log10(concOH);
+                    const pOH = -Math.log10((molBase - molAcid) / V_total);
                     return 14.0 - pOH;
                 }
             } 
-            
-            // 2. 弱酸逻辑 (Charge Balance / Cubic Equation)
+            // 2. 弱酸逻辑 (电荷守恒 - 牛顿法)
             else {
-                // 转换为升和摩尔进行计算
                 const Va_L = Va / 1000;
-                const Vb_L = Vb / 1000;
+                const Vb_L = Vb_mL / 1000;
                 const Vt_L = V_total / 1000;
-                
-                // 稀释后的名义浓度
                 const Ca_nom = (Va_L * Ca) / Vt_L;
                 const Cb_nom = (Vb_L * Cb) / Vt_L;
                 const Ka = CONSTANTS.Ka_Acetic;
                 const Kw = CONSTANTS.Kw;
 
-                // 电荷守恒推导出的三次方程: [H+]^3 + (Ka + Cb)[H+]^2 + (Ka*Cb - Kw - Ka*Ca)[H+] - Kw*Ka = 0
-                // 系数
+                // [H+]^3 + (Ka + Cb)[H+]^2 + (Ka*Cb - Kw - Ka*Ca)[H+] - Kw*Ka = 0
                 const a = Ka + Cb_nom;
                 const b = Ka * Cb_nom - Kw - Ka * Ca_nom;
                 const c = -Kw * Ka;
 
-                // 牛顿迭代法求解
-                // 初始猜测：如果是开始阶段，H+约等于sqrt(Ka*Ca)
-                let h = (Vb === 0) ? Math.sqrt(Ka * Ca) : 1e-7; 
-                
+                let h = (Vb_mL === 0) ? Math.sqrt(Ka * Ca) : 1e-6; 
                 for(let i=0; i<50; i++) {
                     const f = h*h*h + a*h*h + b*h + c;
                     const df = 3*h*h + 2*a*h + b;
                     if(Math.abs(df) < 1e-12) break;
-                    const next_h = h - f/df;
-                    if(Math.abs(next_h - h) < 1e-14) {
-                        h = next_h;
-                        break;
-                    }
-                    h = next_h;
+                    h = h - f/df;
                 }
-                if (h <= 0) h = 1e-14; // 安全钳位
-                return -Math.log10(h);
+                return -Math.log10(Math.abs(h));
             }
         }
 
-        // --- UI 更新逻辑 ---
-
+        // --- UI 逻辑 ---
         const els = {
             ph: document.getElementById('phDisplay'),
             vol: document.getElementById('volDisplay'),
             mol: document.getElementById('molDisplay'),
-            stage: document.getElementById('stageDisplay'),
-            flask: document.getElementById('flaskLiquid'),
+            status: document.getElementById('statusDisplay'),
             burette: document.getElementById('buretteLiquid'),
-            colorDot: document.getElementById('colorDot'),
+            flask: document.getElementById('flaskLiquid'),
+            colorSample: document.getElementById('colorSample'),
             colorName: document.getElementById('colorName'),
             drop: document.getElementById('drop'),
             autoBtn: document.getElementById('autoBtn'),
-            toast: document.getElementById('toast'),
-            toastMsg: document.getElementById('toastMsg')
+            toast: document.getElementById('toast')
         };
 
-        // 初始化图表
+        // Chart Init
         const chartCtx = document.getElementById('titrationChart').getContext('2d');
         const chart = new Chart(chartCtx, {
             type: 'scatter',
@@ -407,23 +459,22 @@
                 datasets: [{
                     label: 'pH 曲线',
                     data: [],
-                    borderColor: '#4f46e5',
+                    borderColor: '#4f46e5', // Indigo 600
                     borderWidth: 2,
                     showLine: true,
-                    pointRadius: 0, // 线条平滑
-                    pointHoverRadius: 6,
+                    pointRadius: 0,
                     tension: 0.4
                 }, {
                     label: '当前点',
                     data: [],
-                    backgroundColor: '#ef4444', // 红点
-                    pointRadius: 6
+                    backgroundColor: '#ef4444',
+                    pointRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false, // 关闭动画提升性能
+                animation: false,
                 scales: {
                     x: { min: 0, max: 50, title: {display:true, text:'加入 NaOH (mL)'} },
                     y: { min: 0, max: 14, title: {display:true, text:'pH'} }
@@ -434,139 +485,107 @@
         function updateUI() {
             const ph = calculatePH(STATE.addedVol);
             
-            // 1. 数字显示
+            // Text
             els.ph.textContent = ph.toFixed(2);
             els.vol.textContent = STATE.addedVol.toFixed(2);
-            
             const remAcid = Math.max(0, (CONSTANTS.acidVol * CONSTANTS.acidConc) - (STATE.addedVol * CONSTANTS.baseConc));
             els.mol.textContent = remAcid.toFixed(2);
 
-            // 2. 阶段显示
-            const eqVol = 25.0;
-            if (Math.abs(STATE.addedVol - eqVol) < 0.05) {
-                els.stage.textContent = "★ 达到等当点 ★";
-                els.stage.className = "text-sm font-bold text-emerald-600 animate-pulse";
-            } else if (STATE.addedVol < eqVol) {
-                els.stage.textContent = "酸过量";
-                els.stage.className = "text-sm font-bold text-orange-500";
+            // Status
+            const diff = STATE.addedVol - 25.0;
+            if (Math.abs(diff) < 0.05) {
+                els.status.textContent = "达到等当点 (Equivalence)";
+                els.status.className = "text-sm font-bold text-emerald-600 animate-pulse";
+            } else if (diff < 0) {
+                els.status.textContent = "酸过量";
+                els.status.className = "text-sm font-bold text-slate-600";
             } else {
-                els.stage.textContent = "碱过量";
-                els.stage.className = "text-sm font-bold text-indigo-500";
+                els.status.textContent = "碱过量";
+                els.status.className = "text-sm font-bold text-indigo-600";
             }
 
-            // 3. 颜色逻辑
-            const indicator = document.getElementById('indicator').value;
-            let color = 'rgba(0,0,0,0)';
-            let cName = '无色';
+            // Visuals: Liquid Levels
+            const buretteEmptyPct = (STATE.addedVol / 50.0) * 100;
+            els.burette.style.top = `${buretteEmptyPct}%`; // Move liquid DOWN
+            els.burette.style.height = `${100 - buretteEmptyPct}%`; // Shrink liquid
 
-            if (indicator === 'pp') { // 酚酞
+            // Flask
+            const flaskFill = 50 + (STATE.addedVol / 50) * 20;
+            els.flask.style.height = `${flaskFill}%`;
+
+            // Visuals: Color
+            const indicator = document.getElementById('indicatorSelect').value;
+            let col = 'transparent'; 
+            let name = '无色';
+            
+            if (indicator === 'pp') {
                 if (ph >= 8.2) {
-                    // 渐变模拟
-                    const intensity = Math.min(1, (ph - 8.2) / 1.8); 
-                    color = `rgba(236, 72, 153, ${intensity * 0.8})`; // Pink
-                    cName = ph > 10 ? '深粉色' : '浅粉色';
+                    const alpha = Math.min(1, (ph - 8.2) / 1.5);
+                    col = `rgba(236, 72, 153, ${alpha})`;
+                    name = ph > 10 ? '深粉色' : '浅粉色';
                 }
-            } else { // 甲基橙
-                if (ph < 3.1) { color = 'rgba(239, 68, 68, 0.5)'; cName = '红色'; }
-                else if (ph < 4.4) { color = 'rgba(249, 115, 22, 0.5)'; cName = '橙色'; }
-                else { color = 'rgba(234, 179, 8, 0.5)'; cName = '黄色'; }
+            } else {
+                if (ph < 3.1) { col = 'rgba(239, 68, 68, 0.6)'; name = '红色'; }
+                else if (ph < 4.4) { col = 'rgba(249, 115, 22, 0.6)'; name = '橙色'; }
+                else { col = 'rgba(234, 179, 8, 0.6)'; name = '黄色'; }
             }
+            els.flask.style.backgroundColor = col;
+            els.colorSample.style.backgroundColor = (col === 'transparent') ? '#fff' : col;
+            els.colorName.textContent = name;
 
-            els.flask.style.backgroundColor = color;
-            els.colorDot.style.backgroundColor = (color === 'rgba(0,0,0,0)') ? '#fff' : color;
-            els.colorName.textContent = cName;
-
-            // 4. 液面高度
-            const maxVol = 50.0;
-            const buretteH = Math.max(0, 100 - (STATE.addedVol / maxVol) * 100);
-            els.burette.style.height = `${buretteH}%`; // 剩余量
-            
-            const flaskBase = 40; // 初始40%
-            const flaskH = flaskBase + (STATE.addedVol / 50) * 20; 
-            els.flask.style.height = `${flaskH}%`;
-
-            // 5. 图表更新
+            // Chart
             STATE.history.push({x: STATE.addedVol, y: ph});
-            // 简单去重排序，防止自动滴定时的微小乱序
             STATE.history.sort((a,b) => a.x - b.x);
-            
             chart.data.datasets[0].data = STATE.history;
             chart.data.datasets[1].data = [{x: STATE.addedVol, y: ph}];
             chart.update('none');
         }
 
-        // --- 操作逻辑 ---
-
+        // --- Controls ---
         function addVolume(ml) {
-            // 安全检查
             if (STATE.addedVol + ml > 50) return;
-
             STATE.addedVol += ml;
             
-            // 触发动画
-            els.drop.classList.remove('falling');
+            // Drop Anim
+            els.drop.classList.remove('animate-drop');
             void els.drop.offsetWidth;
-            els.drop.classList.add('falling');
-
+            els.drop.classList.add('animate-drop');
+            
             updateUI();
         }
 
         function showToast(msg) {
-            els.toastMsg.textContent = msg;
-            els.toast.classList.remove('hidden');
-            setTimeout(() => els.toast.classList.add('hidden'), 3000);
+            els.toast.textContent = msg;
+            els.toast.classList.add('show');
+            setTimeout(() => els.toast.classList.remove('show'), 3000);
         }
 
         function toggleAuto() {
             if (STATE.isAuto) {
                 stopAuto();
             } else {
-                startAuto();
+                if(STATE.addedVol >= 48) { showToast("实验已结束，请重置"); return; }
+                STATE.isAuto = true;
+                els.autoBtn.innerHTML = "<span>⏸</span> 暂停滴定";
+                els.autoBtn.classList.replace('bg-indigo-600', 'bg-slate-500');
+                
+                STATE.timer = setInterval(() => {
+                    // Pause Logic (24mL)
+                    if (!STATE.pausedAtJump && STATE.addedVol >= 24.0 && STATE.addedVol < 25.0) {
+                        stopAuto();
+                        STATE.pausedAtJump = true;
+                        showToast("接近突变点 (24mL)，已自动暂停！");
+                        return;
+                    }
+                    if (STATE.addedVol >= 50) { stopAuto(); return; }
+
+                    // Speed Logic: Slow down near eq point
+                    let step = 0.1;
+                    if (Math.abs(STATE.addedVol - 25.0) < 1.0) step = 0.02;
+
+                    addVolume(step);
+                }, 50);
             }
-        }
-
-        function startAuto() {
-            if (STATE.addedVol >= 48) {
-                showToast("实验已结束，请重置");
-                return;
-            }
-
-            STATE.isAuto = true;
-            els.autoBtn.innerHTML = "<span>⏸</span> 暂停";
-            els.autoBtn.classList.replace('bg-indigo-600', 'bg-slate-500');
-            els.autoBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-slate-600');
-
-            const speedLevel = parseInt(document.getElementById('speedRange').value);
-            const interval = 50; // ms
-            // 速度: Level 1 (0.02mL/tick) -> Level 5 (0.1mL/tick)
-            const increment = speedLevel * 0.02; 
-
-            STATE.timer = setInterval(() => {
-                // 1. 强制暂停逻辑 (24.0mL)
-                const pausePoint = 24.0;
-                if (!STATE.pausedAtJump && STATE.addedVol >= pausePoint && STATE.addedVol < 25.0) {
-                    stopAuto();
-                    STATE.pausedAtJump = true;
-                    showToast("⚠️ 已接近突变点(24mL)，系统自动暂停！");
-                    return;
-                }
-
-                // 2. 结束逻辑
-                if (STATE.addedVol >= 50) {
-                    stopAuto();
-                    return;
-                }
-
-                // 3. 执行增加
-                // 智能减速：如果接近等当点，无视设定速度，强制减速
-                let currentInc = increment;
-                if (Math.abs(STATE.addedVol - 25.0) < 1.0) {
-                    currentInc = 0.02; // 极慢
-                }
-
-                addVolume(currentInc);
-
-            }, interval);
         }
 
         function stopAuto() {
@@ -574,7 +593,6 @@
             clearInterval(STATE.timer);
             els.autoBtn.innerHTML = "<span>▶</span> 继续自动滴定";
             els.autoBtn.classList.replace('bg-slate-500', 'bg-indigo-600');
-            els.autoBtn.classList.replace('hover:bg-slate-600', 'hover:bg-indigo-700');
         }
 
         function resetLab() {
@@ -582,9 +600,9 @@
             STATE.addedVol = 0;
             STATE.history = [];
             STATE.pausedAtJump = false;
-            STATE.acidType = document.getElementById('acidType').value;
+            STATE.acidType = document.getElementById('acidSelect').value;
             
-            // 清空图表
+            // Reset visuals
             chart.data.datasets[0].data = [];
             chart.data.datasets[1].data = [];
             
@@ -592,7 +610,7 @@
             showToast("实验已重置");
         }
 
-        // 初始化
+        // Init
         resetLab();
 
     </script>
